@@ -13,6 +13,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { PandaMascot } from '../components/PandaMascot';
+import { SPORTS_ACTIVITIES } from '../data/sportsActivities';
 import { formatTime12h, calculateDayTotals } from '../utils/calculations';
 
 export function History({ storage, todayHelper }) {
@@ -404,9 +405,13 @@ export function History({ storage, todayHelper }) {
               }`}
             >
               <span className="text-[10px] font-black uppercase">{d.dayLabel}</span>
-              <span className="text-base my-0.5">{d.workoutDone ? '💪' : '💤'}</span>
+              <span className="text-base my-0.5">
+                {d.workoutDone
+                  ? (SPORTS_ACTIVITIES.find(a => a.id === d.workoutType)?.emoji || '💪')
+                  : '💤'}
+              </span>
               <span className="text-[9px] font-bold truncate">
-                {d.workoutDone ? `${d.workoutCalories}k` : 'Rest'}
+                {d.workoutDone ? `${d.workoutCalories} kcal` : 'Rest'}
               </span>
             </div>
           ))}

@@ -582,3 +582,4 @@ export function HealthifyFoodSearchModal({
     </div>
   );
 }
+

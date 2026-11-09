@@ -758,3 +758,4 @@ export const HEALTHIFY_FOOD_DATABASE = [
     tags: ['sundal', 'chickpeas', 'snack', 'high protein', 'fiber']
   }
 ];
+

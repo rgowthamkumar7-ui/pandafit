@@ -314,3 +314,4 @@ export function HealthifyFoodModal({
     </div>
   );
 }
+

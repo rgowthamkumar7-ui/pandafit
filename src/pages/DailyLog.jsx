@@ -15,6 +15,7 @@ import {
 import { DaySelector } from '../components/DaySelector';
 import { PandaMascot } from '../components/PandaMascot';
 import { HealthSyncModal } from '../components/HealthSyncModal';
+import { SportsActivityTracker } from '../components/activity/SportsActivityTracker';
 import {
   WORKOUT_TYPES,
   estimateWorkoutCalories,
@@ -228,98 +229,21 @@ export function DailyLog({ storage, todayHelper }) {
         </div>
       </div>
 
-      {/* ── SECTION 2: WORKOUT SESSION ── */}
-      <div className="panda-card p-4 mb-4 bg-white">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-pandaOrange-100 flex items-center justify-center font-bold">
-              <Dumbbell className="w-4 h-4 text-pandaOrange-600" />
-            </div>
-            <div>
-              <h2 className="text-sm font-black text-ink-900">Workout Session</h2>
-              <p className="text-[11px] text-ink-500 font-bold">Training & active movement</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              const nextVal = !workoutDone;
-              setWorkoutDone(nextVal);
-              if (nextVal && !workoutCalories) {
-                setWorkoutCalories(estimateWorkoutCalories(workoutType, workoutDuration));
-              }
-            }}
-            className={`px-3 py-1.5 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all ${workoutDone
-                ? 'btn-panda-green !py-1.5'
-                : 'btn-panda-white !py-1.5'
-              }`}
-          >
-            {workoutDone ? (
-              <>
-                <Check className="w-3.5 h-3.5 stroke-[3]" /> Done! 💪
-              </>
-            ) : (
-              'Not Yet ⏳'
-            )}
-          </button>
-        </div>
-
-        {workoutDone && (
-          <div className="space-y-3 pt-3 border-t-2 border-ink-100 animate-pop-in">
-            <div>
-              <label className="block text-xs font-black text-ink-700 mb-1.5 uppercase">
-                Activity Type
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {WORKOUT_TYPES.slice(0, 8).map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => handleWorkoutTypeChange(type.id)}
-                    className={`p-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${workoutType === type.id
-                        ? 'btn-panda-orange !border-b-2 !py-2'
-                        : 'btn-panda-white !py-2'
-                      }`}
-                  >
-                    <span className="text-base">{type.emoji}</span>
-                    <span className="truncate">{type.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div>
-                <label className="block text-[11px] font-black text-ink-600 mb-1">
-                  ⏱️ Duration (min)
-                </label>
-                <input
-                  type="number"
-                  value={workoutDuration}
-                  onChange={(e) => handleDurationChange(e.target.value)}
-                  className="panda-input font-black"
-                  min="0"
-                  step="5"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black text-ink-600 mb-1">
-                  🔥 Burned (kcal)
-                </label>
-                <input
-                  type="number"
-                  value={workoutCalories}
-                  onChange={(e) => setWorkoutCalories(e.target.value)}
-                  className="panda-input font-black text-pandaOrange-600"
-                  min="0"
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* ── SECTION 2: SPORTS & ACTIVITY TRACKER (MET & WEIGHT BASED) ── */}
+      <SportsActivityTracker
+        dayLog={dayLog}
+        selectedDateStr={selectedDateStr}
+        settings={settings}
+        currentWeight={weight}
+        prevWeight={prevWeight}
+        onSaveWorkout={(workoutData) => {
+          setWorkoutDone(workoutData.workoutDone);
+          if (workoutData.workoutType) setWorkoutType(workoutData.workoutType);
+          if (workoutData.workoutDuration !== undefined) setWorkoutDuration(workoutData.workoutDuration);
+          if (workoutData.workoutCaloriesBurned !== undefined) setWorkoutCalories(workoutData.workoutCaloriesBurned);
+          saveUpdates(workoutData);
+        }}
+      />
 
       {/* ── SECTION 3: STEPS TRACKER ── */}
       <div className="panda-card p-4 mb-4 bg-white">

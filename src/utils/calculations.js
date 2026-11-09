@@ -1,4 +1,5 @@
 import { format, subDays, parseISO } from 'date-fns';
+import { SPORTS_ACTIVITIES, calculateTotalActivityBurn } from '../data/sportsActivities';
 
 /**
  * Calculates approximate calories burned from step count (~0.04 kcal / step)
@@ -10,27 +11,27 @@ export function calculateStepCalories(steps) {
 
 /**
  * Workout calorie burn rates per minute (approximate averages)
+ * Backwards compatible alias of SPORTS_ACTIVITIES
  */
-export const WORKOUT_TYPES = [
-  { id: 'weights', label: 'Weight Training', emoji: '🏋️‍♂️', calPerMin: 6.5 },
-  { id: 'running', label: 'Running / Jogging', emoji: '🏃', calPerMin: 10.5 },
-  { id: 'walking', label: 'Brisk Walking', emoji: '🚶', calPerMin: 4.5 },
-  { id: 'cycling', label: 'Cycling', emoji: '🚴', calPerMin: 8.0 },
-  { id: 'yoga', label: 'Yoga & Stretch', emoji: '🧘', calPerMin: 3.8 },
-  { id: 'pilates', label: 'Pilates', emoji: '🤸', calPerMin: 5.2 },
-  { id: 'hiit', label: 'HIIT / Circuit', emoji: '⚡', calPerMin: 9.5 },
-  { id: 'swimming', label: 'Swimming', emoji: '🏊', calPerMin: 8.5 },
-  { id: 'dance', label: 'Dance Fitness', emoji: '💃', calPerMin: 7.0 },
-  { id: 'other', label: 'Other Active', emoji: '✨', calPerMin: 5.0 },
-];
+export const WORKOUT_TYPES = SPORTS_ACTIVITIES.map(a => ({
+  id: a.id,
+  label: a.label,
+  emoji: a.emoji,
+  calPerMin: Number((a.met * 70 / 60).toFixed(1)),
+  met: a.met,
+  category: a.category,
+  intensity: a.intensity,
+  description: a.description,
+}));
 
 /**
- * Estimates calories burned for a workout based on type and duration
+ * Estimates calories burned for a workout based on type, duration and optional body weight (kg)
+ * Uses gold standard MET formula: MET * weightKg * (durationMinutes / 60)
  */
-export function estimateWorkoutCalories(typeId, durationMinutes) {
-  const type = WORKOUT_TYPES.find(t => t.id === typeId) || WORKOUT_TYPES[0];
+export function estimateWorkoutCalories(typeId, durationMinutes, weightKg = 70) {
+  const kg = Number(weightKg) || 70;
   const minutes = Math.max(0, Number(durationMinutes) || 0);
-  return Math.round(minutes * type.calPerMin);
+  return calculateTotalActivityBurn(typeId, kg, minutes);
 }
 
 /**

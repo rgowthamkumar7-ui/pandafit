@@ -28,6 +28,7 @@ import {
   parseGoogleAuthTokenFromUrl,
   parseAppleHealthUrlParams,
 } from '../services/healthSync';
+import { SPORTS_ACTIVITIES } from '../data/sportsActivities';
 import { calculateDayTotals, calculateWeightTrend, formatTime12h, calculateStepCalories } from '../utils/calculations';
 
 export function Dashboard({ storage, todayHelper }) {
@@ -439,7 +440,11 @@ export function Dashboard({ storage, todayHelper }) {
                 <CheckCircle2 className="w-3 h-3 text-bamboo-600" /> Done!
               </span>
               <p className="text-xs font-black text-ink-900 mt-1 capitalize truncate">
-                {todayLog.workoutType || 'Workout'} · {todayLog.workoutCaloriesBurned || 0} kcal
+                {(() => {
+                  const act = SPORTS_ACTIVITIES.find(a => a.id === todayLog.workoutType);
+                  const label = act ? `${act.emoji} ${act.label}` : (todayLog.workoutType || 'Workout');
+                  return `${label} · ${todayLog.workoutCaloriesBurned || 0} kcal`;
+                })()}
               </p>
             </div>
           ) : (
