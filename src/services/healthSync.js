@@ -290,3 +290,4 @@ export async function performAutoStepSync({
 
   return { synced: false, reason: 'Unknown health source' };
 }
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   Globe,
@@ -6,15 +6,15 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  Flame,
-  Utensils,
   Sparkles,
   Info
 } from 'lucide-react';
-import { searchInternetFoods } from '../services/onlineFoodSearch';
-import { PandaMascot } from './PandaMascot';
+import { searchInternetFoods, getLiveSearchSuggestions } from '../services/onlineFoodSearch';
+import { FoodQuantityModal } from './FoodQuantityModal';
 
 const POPULAR_INDIAN_SEARCHES = [
+  'Masala Chai',
+  'Filter Coffee',
   'Chicken 65',
   'Ambur Mutton Biryani',
   'Mutton Sukka',
@@ -47,6 +47,8 @@ export function OnlineFoodSearchModal({
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedMealType, setSelectedMealType] = useState('breakfast');
   const [toastMessage, setToastMessage] = useState('');
+  const [isTypingFocused, setIsTypingFocused] = useState(false);
+  const [quantityFood, setQuantityFood] = useState(null);
 
   // Manual Form State
   const [manualName, setManualName] = useState('');
@@ -57,9 +59,11 @@ export function OnlineFoodSearchModal({
   const [manualFat, setManualFat] = useState('');
   const [manualDiet, setManualDiet] = useState('veg');
 
+  const liveSuggestions = getLiveSearchSuggestions(searchQuery.trim(), 5);
+
   // Trigger search on mount if initialQuery is provided
   useEffect(() => {
-    if (initialQuery && initialQuery.trim().length >= 2) {
+    if (initialQuery && initialQuery.trim().length >= 1) {
       setSearchQuery(initialQuery);
       handlePerformSearch(initialQuery);
     }
@@ -67,10 +71,11 @@ export function OnlineFoodSearchModal({
 
   const handlePerformSearch = async (queryToSearch) => {
     const q = queryToSearch || searchQuery;
-    if (!q || q.trim().length < 2) return;
+    if (!q || q.trim().length < 1) return;
 
     setLoading(true);
     setHasSearched(true);
+    setIsTypingFocused(false);
     try {
       const items = await searchInternetFoods(q.trim());
       setResults(items);
@@ -81,42 +86,38 @@ export function OnlineFoodSearchModal({
     }
   };
 
-  const handleSelectFood = (food) => {
-    // 1. Add to today's meal diary
-    onAddMeal(selectedDateStr, {
-      name: food.name,
-      mealType: selectedMealType,
-      calories: Number(food.calories) || 0,
-      protein: Number(food.protein) || 0,
-      carbs: Number(food.carbs) || 0,
-      fat: Number(food.fat) || 0,
-      serving: food.serving,
-      image: food.image,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    });
+  const handleSelectFoodWithQuantity = (food) => {
+    setQuantityFood(food);
+  };
 
-    // 2. Save permanently to custom Indian foods database
-    onSaveCustomFood({
-      id: food.id || `custom-${Date.now()}`,
-      name: food.name,
-      serving: food.serving,
-      calories: Number(food.calories) || 0,
-      protein: Number(food.protein) || 0,
-      carbs: Number(food.carbs) || 0,
-      fat: Number(food.fat) || 0,
-      fiber: Number(food.fiber) || 0,
-      diet: food.diet || 'veg',
-      category: selectedMealType,
-      image: food.image,
-      isCustom: true,
-      source: food.source || 'Internet Search',
-    });
+  const handleConfirmQuantityAdd = (dateStr, mealPayload) => {
+    onAddMeal(dateStr, mealPayload);
 
-    setToastMessage(`Added "${food.name}" to ${selectedMealType}! 🌟`);
+    // Save permanently to custom Indian foods database
+    if (quantityFood) {
+      onSaveCustomFood({
+        id: quantityFood.id || `custom-${Date.now()}`,
+        name: quantityFood.name,
+        serving: quantityFood.serving,
+        calories: Number(quantityFood.calories) || 0,
+        protein: Number(quantityFood.protein) || 0,
+        carbs: Number(quantityFood.carbs) || 0,
+        fat: Number(quantityFood.fat) || 0,
+        fiber: Number(quantityFood.fiber) || 0,
+        diet: quantityFood.diet || 'veg',
+        category: mealPayload.mealType,
+        image: quantityFood.image,
+        isCustom: true,
+        source: quantityFood.source || 'Internet Search',
+      });
+    }
+
+    setToastMessage(`Added "${mealPayload.name}"! 🌟`);
     setTimeout(() => {
       setToastMessage('');
+      setQuantityFood(null);
       onClose();
-    }, 1200);
+    }, 900);
   };
 
   const handleManualSubmit = (e) => {
@@ -153,7 +154,7 @@ export function OnlineFoodSearchModal({
     setTimeout(() => {
       setToastMessage('');
       onClose();
-    }, 1200);
+    }, 1000);
   };
 
   return (
@@ -244,34 +245,83 @@ export function OnlineFoodSearchModal({
         <div className="p-4 overflow-y-auto flex-1 space-y-4">
           {activeTab === 'search' ? (
             <>
-              {/* Search Bar */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handlePerformSearch();
-                }}
-                className="flex gap-2"
-              >
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="e.g. Chicken 65, Ambur Biryani, MTR Gulab Jamun..."
-                    className="panda-input pl-10 text-xs sm:text-sm font-black"
-                    autoFocus
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-panda-orange px-4 py-2.5 text-xs font-black flex items-center gap-1.5 flex-shrink-0"
+              {/* Search Bar with Autocomplete */}
+              <div className="relative">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handlePerformSearch();
+                  }}
+                  className="flex gap-2"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
-                  <span>Search Web</span>
-                </button>
-              </form>
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-ink-400 absolute left-3.5 top-3.5" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setIsTypingFocused(true);
+                      }}
+                      onFocus={() => setIsTypingFocused(true)}
+                      placeholder="e.g. Masala Chai, Dosa, Chicken 65, Biryani..."
+                      className="panda-input pl-10 text-xs sm:text-sm font-black"
+                      autoFocus
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setIsTypingFocused(false);
+                        }}
+                        className="absolute right-3 top-3 text-ink-400 hover:text-ink-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-panda-orange px-4 py-2.5 text-xs font-black flex items-center gap-1.5 flex-shrink-0"
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                    <span>Search</span>
+                  </button>
+                </form>
+
+                {/* Dropdown Suggestions while typing */}
+                {isTypingFocused && searchQuery.trim().length >= 1 && liveSuggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border-2 border-ink-200 shadow-2xl overflow-hidden z-40 animate-pop-in divide-y divide-ink-100">
+                    <div className="p-2 bg-ink-50 text-[10px] font-black text-ink-400 uppercase tracking-wider">
+                      Suggestions
+                    </div>
+                    {liveSuggestions.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setIsTypingFocused(false);
+                          handleSelectFoodWithQuantity(item);
+                        }}
+                        className="w-full text-left p-2.5 hover:bg-pandaOrange-50 flex items-center gap-3 transition-colors"
+                      >
+                        <div className="w-9 h-9 rounded-xl overflow-hidden bg-ink-100 border border-ink-200 flex-shrink-0">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-ink-900 truncate">{item.name}</p>
+                          <p className="text-[10px] text-ink-400 font-bold">{item.serving}</p>
+                        </div>
+                        <span className="text-xs font-black text-pandaOrange-600 flex-shrink-0">
+                          🔥 {item.calories} kcal
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Quick Suggestions Chips */}
               {!hasSearched && (
@@ -299,15 +349,15 @@ export function OnlineFoodSearchModal({
 
               {/* Loading State */}
               {loading && (
-                <div className="py-10 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="py-8 flex flex-col items-center justify-center text-center space-y-2">
                   <img
                     src="/mascot/panda-running.png"
                     alt="Panda mascot searching"
-                    className="w-20 h-20 object-contain animate-bounce"
+                    className="w-16 h-16 object-contain animate-bounce"
                   />
                   <div>
-                    <p className="text-xs font-black text-ink-800">Searching the internet for nutrition facts...</p>
-                    <p className="text-[11px] text-ink-400 font-bold mt-0.5">Scanning Open Food Facts & Indian Nutrition Knowledge Base 🐾</p>
+                    <p className="text-xs font-black text-ink-800">Searching nutrition database...</p>
+                    <p className="text-[11px] text-ink-400 font-bold mt-0.5">Fetching verified macros & photos 🐾</p>
                   </div>
                 </div>
               )}
@@ -316,8 +366,8 @@ export function OnlineFoodSearchModal({
               {!loading && hasSearched && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-xs font-black text-ink-500">
-                    <span>Found {results.length} internet items for "{searchQuery}"</span>
-                    <span className="text-pandaOrange-600">Tap to Log & Save</span>
+                    <span>Found {results.length} items for "{searchQuery}"</span>
+                    <span className="text-pandaOrange-600">Tap to choose quantity</span>
                   </div>
 
                   {results.length === 0 ? (
@@ -325,34 +375,34 @@ export function OnlineFoodSearchModal({
                       <span className="text-3xl block mb-2">🔍</span>
                       <p className="text-xs font-black text-ink-800">No matching online results found</p>
                       <p className="text-[11px] text-ink-500 font-bold mt-1">
-                        Try a different spelling or use the "Custom Recipe Entry" tab to add it manually!
+                        Try a different spelling or use "Custom Recipe Entry" tab!
                       </p>
                     </div>
                   ) : (
                     results.map((item) => (
                       <div
                         key={item.id}
-                        className="panda-card p-3.5 bg-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-pandaOrange-400 transition-all"
+                        onClick={() => handleSelectFoodWithQuantity(item)}
+                        className="panda-card p-3 bg-white hover:border-pandaOrange-400 transition-all cursor-pointer flex items-center justify-between gap-3 group"
                       >
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           {/* Dish Image */}
-                          <div className="w-16 h-16 rounded-2xl overflow-hidden bg-ink-100 flex-shrink-0 border-2 border-ink-100 relative">
+                          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-ink-100 flex-shrink-0 border border-ink-100 relative">
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               onError={(e) => {
                                 e.target.src = 'https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=600&q=80';
                               }}
                             />
-                            {/* Diet Dot */}
                             <span
-                              className={`absolute top-1 left-1 w-3 h-3 rounded-md flex items-center justify-center border bg-white ${
+                              className={`absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-sm flex items-center justify-center border bg-white ${
                                 item.diet === 'non-veg' ? 'border-red-600' : 'border-green-600'
                               }`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
+                                className={`w-1 h-1 rounded-full ${
                                   item.diet === 'non-veg' ? 'bg-red-600' : 'bg-green-600'
                                 }`}
                               />
@@ -361,7 +411,7 @@ export function OnlineFoodSearchModal({
 
                           {/* Details */}
                           <div className="min-w-0 flex-1">
-                            <h4 className="text-xs sm:text-sm font-black text-ink-900 leading-snug">
+                            <h4 className="text-xs font-black text-ink-900 leading-snug truncate">
                               {item.name}
                             </h4>
                             <p className="text-[10px] text-ink-500 font-bold truncate">
@@ -369,18 +419,15 @@ export function OnlineFoodSearchModal({
                             </p>
 
                             {/* Macro Pills */}
-                            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pandaOrange-100 text-pandaOrange-700 border border-pandaOrange-200">
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-pandaOrange-100 text-pandaOrange-700">
                                 🔥 {item.calories} kcal
                               </span>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-green-50 text-green-700">
                                 🍗 {item.protein}g P
                               </span>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700">
                                 🥖 {item.carbs}g C
-                              </span>
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                🥑 {item.fat}g F
                               </span>
                             </div>
                           </div>
@@ -389,10 +436,13 @@ export function OnlineFoodSearchModal({
                         {/* Add Button */}
                         <button
                           type="button"
-                          onClick={() => handleSelectFood(item)}
-                          className="btn-panda-orange w-full sm:w-auto px-4 py-2.5 text-xs font-black flex items-center justify-center gap-1.5 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectFoodWithQuantity(item);
+                          }}
+                          className="btn-panda-orange px-3 py-1.5 text-xs font-black flex items-center gap-1 flex-shrink-0"
                         >
-                          <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add to {selectedMealType}
+                          <Plus className="w-3.5 h-3.5 stroke-[3]" /> Add
                         </button>
                       </div>
                     ))
@@ -405,7 +455,7 @@ export function OnlineFoodSearchModal({
             <form onSubmit={handleManualSubmit} className="space-y-3 animate-pop-in">
               <div className="p-3 bg-pandaOrange-50 rounded-2xl border border-pandaOrange-200 flex items-center gap-2 text-xs font-bold text-pandaOrange-800">
                 <Info className="w-4 h-4 flex-shrink-0 text-pandaOrange-600" />
-                <span>Create any custom Indian food item. It will be added to your meal and saved in your personal database permanently!</span>
+                <span>Create custom Indian food. It will be added to your meal and saved permanently!</span>
               </div>
 
               <div>
@@ -522,13 +572,22 @@ export function OnlineFoodSearchModal({
                 type="submit"
                 className="btn-panda-orange w-full py-3.5 text-xs uppercase tracking-wide flex items-center justify-center gap-1.5 mt-3"
               >
-                <Plus className="w-4 h-4 stroke-[3]" /> Add & Save to {selectedMealType}
+                <Plus className="w-4 h-4 stroke-[3]" /> Add to {selectedMealType}
               </button>
             </form>
           )}
         </div>
       </div>
+
+      {/* Embedded Quantity Modal */}
+      <FoodQuantityModal
+        isOpen={Boolean(quantityFood)}
+        onClose={() => setQuantityFood(null)}
+        food={quantityFood}
+        targetMealType={selectedMealType}
+        selectedDateStr={selectedDateStr}
+        onConfirmAdd={handleConfirmQuantityAdd}
+      />
     </div>
   );
 }
-

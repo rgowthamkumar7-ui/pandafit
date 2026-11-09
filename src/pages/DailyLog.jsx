@@ -216,11 +216,10 @@ export function DailyLog({ storage, todayHelper }) {
               key={timePreset}
               type="button"
               onClick={() => handleQuickWakeUp(timePreset)}
-              className={`text-xs px-2.5 py-1 rounded-xl font-black transition-all ${
-                wakeUpTime === timePreset
+              className={`text-xs px-2.5 py-1 rounded-xl font-black transition-all ${wakeUpTime === timePreset
                   ? 'btn-panda-orange !py-1'
                   : 'btn-panda-white !py-1'
-              }`}
+                }`}
             >
               {timePreset}
             </button>
@@ -250,11 +249,10 @@ export function DailyLog({ storage, todayHelper }) {
                 setWorkoutCalories(estimateWorkoutCalories(workoutType, workoutDuration));
               }
             }}
-            className={`px-3 py-1.5 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all ${
-              workoutDone
+            className={`px-3 py-1.5 rounded-2xl font-black text-xs flex items-center gap-1.5 transition-all ${workoutDone
                 ? 'btn-panda-green !py-1.5'
                 : 'btn-panda-white !py-1.5'
-            }`}
+              }`}
           >
             {workoutDone ? (
               <>
@@ -278,11 +276,10 @@ export function DailyLog({ storage, todayHelper }) {
                     key={type.id}
                     type="button"
                     onClick={() => handleWorkoutTypeChange(type.id)}
-                    className={`p-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${
-                      workoutType === type.id
+                    className={`p-2.5 rounded-2xl text-xs font-black flex items-center gap-2 transition-all ${workoutType === type.id
                         ? 'btn-panda-orange !border-b-2 !py-2'
                         : 'btn-panda-white !py-2'
-                    }`}
+                      }`}
                   >
                     <span className="text-base">{type.emoji}</span>
                     <span className="truncate">{type.label}</span>
@@ -393,8 +390,8 @@ export function DailyLog({ storage, todayHelper }) {
               {settings.healthSyncSource === 'google-fit'
                 ? '🟢 Google Fit Connected'
                 : settings.healthSyncSource === 'apple-health'
-                ? '🍎 Apple Health Connected'
-                : 'Connect Fit / Health'}
+                  ? '🍎 Apple Health Connected'
+                  : 'Connect Fit / Health'}
             </span>
           </div>
 
