@@ -115,6 +115,7 @@ export function useStorage() {
 
   // Meal operations
   const addMeal = useCallback((dateStr, meal) => {
+    const targetDate = dateStr || format(new Date(), 'yyyy-MM-dd');
     const newMeal = {
       id: 'meal-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
       createdAt: new Date().toISOString(),
@@ -122,9 +123,9 @@ export function useStorage() {
     };
 
     setMeals(prev => {
-      const dayMeals = prev[dateStr] || [];
-      const updated = { ...prev, [dateStr]: [...dayMeals, newMeal] };
-      syncToSupabase('meals', { date: dateStr, meals: updated[dateStr] });
+      const dayMeals = prev[targetDate] || [];
+      const updated = { ...prev, [targetDate]: [...dayMeals, newMeal] };
+      syncToSupabase('meals', { date: targetDate, meals: updated[targetDate] });
       return updated;
     });
 
@@ -132,13 +133,14 @@ export function useStorage() {
   }, []);
 
   const deleteMeal = useCallback((dateStr, mealId) => {
+    const targetDate = dateStr || format(new Date(), 'yyyy-MM-dd');
     setMeals(prev => {
-      const dayMeals = prev[dateStr] || [];
+      const dayMeals = prev[targetDate] || [];
       const updated = {
         ...prev,
-        [dateStr]: dayMeals.filter(m => m.id !== mealId),
+        [targetDate]: dayMeals.filter(m => m.id !== mealId),
       };
-      syncToSupabase('meals', { date: dateStr, meals: updated[dateStr] });
+      syncToSupabase('meals', { date: targetDate, meals: updated[targetDate] });
       return updated;
     });
   }, []);

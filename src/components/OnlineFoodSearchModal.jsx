@@ -34,6 +34,7 @@ export function OnlineFoodSearchModal({
   isOpen,
   onClose,
   initialQuery = '',
+  targetMealType = 'breakfast',
   selectedDateStr,
   onAddMeal,
   onSaveCustomFood
@@ -45,21 +46,28 @@ export function OnlineFoodSearchModal({
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [selectedMealType, setSelectedMealType] = useState('breakfast');
+  const [selectedMealType, setSelectedMealType] = useState(targetMealType || 'breakfast');
   const [toastMessage, setToastMessage] = useState('');
   const [isTypingFocused, setIsTypingFocused] = useState(false);
   const [quantityFood, setQuantityFood] = useState(null);
 
+  // Sync selectedMealType when targetMealType changes
+  useEffect(() => {
+    if (targetMealType) {
+      setSelectedMealType(targetMealType);
+    }
+  }, [targetMealType]);
+
   // Manual Form State
   const [manualName, setManualName] = useState('');
-  const [manualServing, setManualServing] = useState('1 serving (200g)');
+  const [manualServing, setManualServing] = useState('1 serving (150g)');
   const [manualCalories, setManualCalories] = useState('');
   const [manualProtein, setManualProtein] = useState('');
   const [manualCarbs, setManualCarbs] = useState('');
   const [manualFat, setManualFat] = useState('');
   const [manualDiet, setManualDiet] = useState('veg');
 
-  const liveSuggestions = getLiveSearchSuggestions(searchQuery.trim(), 5);
+  const liveSuggestions = getLiveSearchSuggestions(searchQuery.trim(), 8);
 
   // Trigger search on mount if initialQuery is provided
   useEffect(() => {

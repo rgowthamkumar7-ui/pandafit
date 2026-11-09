@@ -29,7 +29,7 @@ const MEAL_CONFIG = [
     icon: Coffee,
     emoji: '🥞',
     targetKcal: 500,
-    quickSuggestions: ['Idli Sambar', 'Masala Dosa', 'Ghee Ven Pongal', 'Medu Vada', 'Andhra MLA Pesarattu', 'Kerala Appam', 'Vegetable Rava Upma']
+    quickSuggestions: ['Plain Dosa', 'Masala Dosa', 'Ghee Roast Dosa', 'Rava Dosa', 'Steamed Idli', 'Medu Vada', 'South Indian Sambar', 'Fresh Coconut Chutney']
   },
   {
     id: 'lunch',
@@ -37,7 +37,7 @@ const MEAL_CONFIG = [
     icon: Sun,
     emoji: '🥗',
     targetKcal: 700,
-    quickSuggestions: ['Full South Indian Meals', 'Hyderabadi Chicken Dum Biryani', 'Tempered Curd Rice', 'Karnataka Bisi Bele Bath', 'Chettinad Spicy Chicken', 'Kerala Fish Curry', 'Spiced Egg Biryani']
+    quickSuggestions: ['Steamed White Rice', 'South Indian Sambar', 'Yellow Dal Tadka', 'Curd Rice', 'Plain Curd', 'Hyderabadi Chicken Dum Biryani', 'Chettinad Spicy Chicken Curry']
   },
   {
     id: 'dinner',
@@ -45,7 +45,7 @@ const MEAL_CONFIG = [
     icon: Moon,
     emoji: '🍲',
     targetKcal: 500,
-    quickSuggestions: ['Whole Wheat Chapati (2 pcs) with Paneer', 'Yellow Dal Tadka with 2 Ghee Phulkas', 'Palak Paneer with 2 Multigrain Rotis', 'Street Style Egg Kothu Parotta', 'Karnataka Ragi Mudde', 'Tandoori Paneer Tikka']
+    quickSuggestions: ['Whole Wheat Chapati', 'Phulka', 'Malabar Parotta', 'Paneer Butter Masala', 'Palak Paneer', 'Egg Dosa', 'Paneer Dosa']
   },
   {
     id: 'snack',
@@ -53,7 +53,7 @@ const MEAL_CONFIG = [
     icon: Cookie,
     emoji: '☕',
     targetKcal: 300,
-    quickSuggestions: ['Masala Chai', 'South Indian Filter Coffee', 'Neer Mor', 'White Chickpea Sundal', 'Kerala Raw Banana Chips', 'Crispy Punjabi Samosa', 'Boiled Eggs']
+    quickSuggestions: ['Masala Chai', 'South Indian Filter Coffee', 'Neer Mor', 'Boiled Egg', 'Chicken 65', 'Kondakadalai Sundal', 'Medu Vada']
   },
 ];
 
@@ -92,12 +92,13 @@ export function Nutrition({ storage, todayHelper }) {
   const [onlineSearchQuery, setOnlineSearchQuery] = useState('');
   const [quantityModalFood, setQuantityModalFood] = useState(null);
   const [quantityModalMeal, setQuantityModalMeal] = useState('breakfast');
+  const [toastMessage, setToastMessage] = useState('');
   const searchContainerRef = useRef(null);
 
-  // Live Dropdown Suggestions as user types
+  // Live Dropdown Suggestions as user types (all variants like plain dosa, rava dosa, etc.)
   const liveSuggestions = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return getLiveSearchSuggestions(searchQuery.trim(), 6);
+    return getLiveSearchSuggestions(searchQuery.trim(), 8);
   }, [searchQuery]);
 
   // Close suggestions when clicking outside
@@ -124,8 +125,27 @@ export function Nutrition({ storage, todayHelper }) {
     setIsSearchFocused(false);
   };
 
+  const handleAddMealWithFeedback = (dateStr, payload) => {
+    addMeal(dateStr, payload);
+    setToastMessage(`Logged "${payload.name}" (${payload.serving || ''}) to ${payload.mealType.toUpperCase()}! 🥞`);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
   return (
     <div className="pb-28 pt-4 px-4 max-w-md mx-auto space-y-4">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="p-3 bg-pandaOrange-500 text-white font-black rounded-2xl flex items-center justify-between text-xs animate-pop-in shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-base">✅</span>
+            <span>{toastMessage}</span>
+          </div>
+          <button onClick={() => setToastMessage('')} className="p-1 hover:opacity-80">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Date Navigation */}
       <DaySelector
         selectedDateStr={selectedDateStr}
@@ -445,7 +465,7 @@ export function Nutrition({ storage, todayHelper }) {
         food={quantityModalFood}
         targetMealType={quantityModalMeal}
         selectedDateStr={selectedDateStr}
-        onConfirmAdd={addMeal}
+        onConfirmAdd={handleAddMealWithFeedback}
       />
 
       {/* ── INTERNET FOOD SEARCH & ADD MODAL ── */}
@@ -453,8 +473,9 @@ export function Nutrition({ storage, todayHelper }) {
         isOpen={isOnlineSearchOpen}
         onClose={() => setIsOnlineSearchOpen(false)}
         initialQuery={onlineSearchQuery}
+        targetMealType={quantityModalMeal}
         selectedDateStr={selectedDateStr}
-        onAddMeal={addMeal}
+        onAddMeal={handleAddMealWithFeedback}
         onSaveCustomFood={saveCustomFood}
       />
     </div>

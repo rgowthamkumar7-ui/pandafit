@@ -20,12 +20,16 @@ export function SettingsModal({
     carbsGoal: settings.carbsGoal || 200,
     fatGoal: settings.fatGoal || 65,
     stepsGoal: settings.stepsGoal || 8000,
+    geminiApiKey: localStorage.getItem('pandafit_gemini_api_key') || '',
   });
 
   const [savedToast, setSavedToast] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (formData.geminiApiKey !== undefined) {
+      localStorage.setItem('pandafit_gemini_api_key', formData.geminiApiKey.trim());
+    }
     onSave({
       ...formData,
       calorieGoal: Number(formData.calorieGoal),
@@ -181,6 +185,24 @@ export function SettingsModal({
                   className="duo-input"
                 />
               </div>
+            </div>
+
+            {/* Google Gemini AI Nutrition Search Integration */}
+            <div className="pt-2">
+              <label className="block text-[11px] font-black text-ink-700 mb-1 flex items-center justify-between">
+                <span>🤖 Google Gemini Nutrition API Key</span>
+                <span className="text-[10px] text-pandaOrange-600 font-bold">Optional AI Search</span>
+              </label>
+              <input
+                type="password"
+                value={formData.geminiApiKey}
+                onChange={(e) => setFormData({ ...formData, geminiApiKey: e.target.value })}
+                placeholder="AIzaSy... (Enables Google AI macro analysis)"
+                className="duo-input text-xs font-mono"
+              />
+              <p className="text-[10px] text-ink-400 font-bold mt-1">
+                Allows Google Gemini AI to analyze any custom dish or regional recipe on the web.
+              </p>
             </div>
           </div>
 
