@@ -8,9 +8,12 @@ import {
   Clock,
   Save,
   CheckCircle2,
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 import { DaySelector } from '../components/DaySelector';
 import { PandaMascot } from '../components/PandaMascot';
+import { HealthSyncModal } from '../components/HealthSyncModal';
 import {
   WORKOUT_TYPES,
   estimateWorkoutCalories,
@@ -20,7 +23,8 @@ import {
 } from '../utils/calculations';
 
 export function DailyLog({ storage, todayHelper }) {
-  const { dailyLogs, updateDailyLog, settings } = storage;
+  const { dailyLogs, updateDailyLog, settings, updateSettings } = storage;
+  const [isHealthSyncOpen, setIsHealthSyncOpen] = useState(false);
   const {
     selectedDateStr,
     formattedDate,
@@ -380,6 +384,29 @@ export function DailyLog({ storage, todayHelper }) {
             Reset
           </button>
         </div>
+
+        {/* Auto-Sync with Apple / Google Fit */}
+        <div className="mt-3 pt-2.5 border-t border-ink-100 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs font-bold text-ink-500">
+            <Activity className="w-3.5 h-3.5 text-pandaOrange-500" />
+            <span>
+              {settings.healthSyncSource === 'google-fit'
+                ? '🟢 Google Fit Connected'
+                : settings.healthSyncSource === 'apple-health'
+                ? '🍎 Apple Health Connected'
+                : 'Connect Fit / Health'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsHealthSyncOpen(true)}
+            className="btn-panda-white !py-1 !px-2.5 text-[10px] font-black flex items-center gap-1"
+          >
+            <RefreshCw className="w-3 h-3 text-pandaOrange-500" />
+            <span>Auto-Sync</span>
+          </button>
+        </div>
       </div>
 
       {/* ── SECTION 4: WEIGHT TRACKER ── */}
@@ -427,6 +454,21 @@ export function DailyLog({ storage, todayHelper }) {
       >
         <Save className="w-4 h-4" /> Save Today's Log
       </button>
+
+      {/* Health Sync Modal */}
+      <HealthSyncModal
+        isOpen={isHealthSyncOpen}
+        onClose={() => setIsHealthSyncOpen(false)}
+        settings={settings}
+        updateSettings={updateSettings}
+        currentSteps={Number(steps) || 0}
+        selectedDateStr={selectedDateStr}
+        updateDailyLog={updateDailyLog}
+        onSuccessToast={(msg) => {
+          setSaveSuccessToast(true);
+          setTimeout(() => setSaveSuccessToast(false), 3000);
+        }}
+      />
     </div>
   );
 }

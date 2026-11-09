@@ -19,6 +19,10 @@ const DEFAULT_SETTINGS = {
   fatGoal: 65,
   stepsGoal: 8000,
   waterGoalGlasses: 8,
+  healthSyncSource: 'none', // 'none' | 'google-fit' | 'apple-health'
+  autoSyncSteps: false,
+  lastStepsSyncTime: '',
+  googleClientId: '',
 };
 
 const DEFAULT_ROUTINE_TASKS = [

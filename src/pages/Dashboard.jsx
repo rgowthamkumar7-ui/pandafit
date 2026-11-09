@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Sun,
@@ -12,17 +12,27 @@ import {
   Footprints,
   Sparkles,
   Zap,
-  Crown
+  Crown,
+  Activity,
+  RefreshCw
 } from 'lucide-react';
 import { PandaMascot } from '../components/PandaMascot';
 import { ProgressRing } from '../components/ProgressRing';
 import { SettingsModal } from '../components/SettingsModal';
+import { HealthSyncModal } from '../components/HealthSyncModal';
+import {
+  performAutoStepSync,
+  parseGoogleAuthTokenFromUrl
+} from '../services/healthSync';
 import { calculateDayTotals, calculateWeightTrend, formatTime12h, calculateStepCalories } from '../utils/calculations';
 
 export function Dashboard({ storage, todayHelper }) {
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHealthSyncOpen, setIsHealthSyncOpen] = useState(false);
   const [waterBonusAdded, setWaterBonusAdded] = useState(false);
+  const [syncToast, setSyncToast] = useState('');
+  const [isSyncingSteps, setIsSyncingSteps] = useState(false);
 
   const {
     dailyLogs,
@@ -39,6 +49,33 @@ export function Dashboard({ storage, todayHelper }) {
 
   const todayLog = dailyLogs[selectedDateStr] || {};
   const todayMeals = meals[selectedDateStr] || [];
+
+  // Auto-sync steps on mount if configured
+  useEffect(() => {
+    // 1. Check for Google OAuth token in URL hash
+    const tokenObj = parseGoogleAuthTokenFromUrl();
+    if (tokenObj) {
+      localStorage.setItem('pandafit_gfit_token', tokenObj.accessToken);
+      updateSettings({ healthSyncSource: 'google-fit', autoSyncSteps: true });
+      setSyncToast('Google Fit authenticated! Steps will sync automatically ⚡');
+      setTimeout(() => setSyncToast(''), 3000);
+    }
+
+    // 2. Perform auto-sync if connected
+    if (settings.autoSyncSteps && settings.healthSyncSource && settings.healthSyncSource !== 'none') {
+      performAutoStepSync({
+        settings,
+        currentSteps: todayLog.steps || 0,
+        selectedDateStr,
+        updateDailyLog
+      }).then((res) => {
+        if (res.synced) {
+          setSyncToast(`Auto-synced ${res.steps?.toLocaleString()} steps from ${res.source}! 🐾`);
+          setTimeout(() => setSyncToast(''), 3000);
+        }
+      });
+    }
+  }, []);
 
   const previousDates = Object.keys(dailyLogs)
     .filter(d => d < selectedDateStr)
@@ -114,6 +151,32 @@ export function Dashboard({ storage, todayHelper }) {
     setTimeout(() => setWaterBonusAdded(false), 2500);
   };
 
+  const handleQuickSyncSteps = async () => {
+    if (!settings.healthSyncSource || settings.healthSyncSource === 'none') {
+      setIsHealthSyncOpen(true);
+      return;
+    }
+
+    setIsSyncingSteps(true);
+    try {
+      const res = await performAutoStepSync({
+        settings,
+        currentSteps: todayLog.steps || 0,
+        selectedDateStr,
+        updateDailyLog
+      });
+
+      if (res.synced) {
+        setSyncToast(`Synced ${res.steps?.toLocaleString()} steps from ${res.source}! ⚡`);
+        setTimeout(() => setSyncToast(''), 3000);
+      }
+    } catch (err) {
+      console.warn('Manual sync failed:', err);
+    } finally {
+      setIsSyncingSteps(false);
+    }
+  };
+
   const activePose = waterBonusAdded ? 'hydration' : mascotPose;
   const activeSpeech = waterBonusAdded ? 'Hydration power-up! Refreshing water locked in! 💧' : mascotSpeech;
   const activeSub = waterBonusAdded ? '+250ml pure fitness boost!' : mascotSub;
@@ -123,6 +186,14 @@ export function Dashboard({ storage, todayHelper }) {
 
   return (
     <div className="pb-28 pt-3 px-4 max-w-md mx-auto">
+      {/* Sync Toast Notification */}
+      {syncToast && (
+        <div className="p-3 bg-bamboo-100 border-2 border-bamboo-600 text-bamboo-800 font-black rounded-2xl mb-3 flex items-center gap-2 text-xs animate-pop-in shadow-md">
+          <CheckCircle2 className="w-4 h-4 text-bamboo-600 flex-shrink-0" />
+          <span>{syncToast}</span>
+        </div>
+      )}
+
       {/* ── TOP STATS BAR (HARMONIZED WARM ORANGE) ── */}
       <div className="flex items-center justify-between mb-4 bg-white py-2.5 px-3 rounded-2xl border-2 border-ink-200">
         {/* Streak Badge */}
@@ -247,6 +318,39 @@ export function Dashboard({ storage, todayHelper }) {
         <div className="flex justify-between items-center text-[10px] font-black mt-1">
           <span className="text-ink-500">{stepPercentage}% completed</span>
           <span className="text-pandaOrange-600">{stepPercentage >= 100 ? '🎉 QUEST COMPLETED!' : 'Keep stepping!'}</span>
+        </div>
+
+        {/* HealthKit / Google Fit Auto-Sync Row */}
+        <div className="mt-3 pt-2.5 border-t border-ink-100 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsHealthSyncOpen(true)}
+            className="flex items-center gap-1.5 text-[11px] font-black text-ink-600 hover:text-pandaOrange-600 transition-colors"
+          >
+            {settings.healthSyncSource === 'google-fit' ? (
+              <span className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-lg border border-green-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Google Fit Auto-Sync
+              </span>
+            ) : settings.healthSyncSource === 'apple-health' ? (
+              <span className="flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-lg border border-red-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Apple Health Auto-Sync
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-ink-500 hover:text-ink-800">
+                <Activity className="w-3.5 h-3.5 text-pandaOrange-500" /> Connect Google / Apple Fit
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleQuickSyncSteps}
+            disabled={isSyncingSteps}
+            className="btn-panda-white !py-1 !px-2.5 text-[10px] flex items-center gap-1 font-black"
+          >
+            <RefreshCw className={`w-3 h-3 text-pandaOrange-500 ${isSyncingSteps ? 'animate-spin' : ''}`} />
+            <span>{settings.healthSyncSource === 'none' ? 'Setup' : 'Sync Now'}</span>
+          </button>
         </div>
       </div>
 
@@ -430,6 +534,21 @@ export function Dashboard({ storage, todayHelper }) {
         onSave={updateSettings}
         onLoadSampleData={loadSampleData}
         onClearAllData={clearAllData}
+      />
+
+      {/* Health & Step Tracking Sync Modal */}
+      <HealthSyncModal
+        isOpen={isHealthSyncOpen}
+        onClose={() => setIsHealthSyncOpen(false)}
+        settings={settings}
+        updateSettings={updateSettings}
+        currentSteps={todayLog.steps || 0}
+        selectedDateStr={selectedDateStr}
+        updateDailyLog={updateDailyLog}
+        onSuccessToast={(msg) => {
+          setSyncToast(msg);
+          setTimeout(() => setSyncToast(''), 3500);
+        }}
       />
     </div>
   );
