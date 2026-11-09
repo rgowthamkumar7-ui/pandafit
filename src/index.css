@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Nunito', 'Quicksand', system-ui, sans-serif;
+    background-color: #F8FAFC;
+    color: #1A1C20;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   HARMONIZED 3D GAMIFIED BUTTONS (MATCHING PANDA ORANGE)
+══════════════════════════════════════════════════════ */
+
+/* Hero Orange Button */
+.btn-panda-orange {
+  background-color: #F97316;
+  border-bottom: 4px solid #C2410C;
+  color: #FFFFFF;
+  font-weight: 800;
+  border-radius: 18px;
+  transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+  user-select: none;
+}
+.btn-panda-orange:hover {
+  background-color: #FB923C;
+}
+.btn-panda-orange:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* Bamboo Green Button */
+.btn-panda-green {
+  background-color: #16A34A;
+  border-bottom: 4px solid #15803D;
+  color: #FFFFFF;
+  font-weight: 800;
+  border-radius: 18px;
+  transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+  user-select: none;
+}
+.btn-panda-green:hover {
+  background-color: #22C55E;
+}
+.btn-panda-green:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* Sky Blue Button */
+.btn-panda-blue {
+  background-color: #0EA5E9;
+  border-bottom: 4px solid #0284C7;
+  color: #FFFFFF;
+  font-weight: 800;
+  border-radius: 18px;
+  transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+  user-select: none;
+}
+.btn-panda-blue:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* White 3D Beveled Button */
+.btn-panda-white {
+  background-color: #FFFFFF;
+  border: 2px solid #E2E8F0;
+  border-bottom: 4px solid #CBD5E1;
+  color: #2D3139;
+  font-weight: 800;
+  border-radius: 18px;
+  transition: transform 0.08s ease, border-bottom-width 0.08s ease;
+  user-select: none;
+}
+.btn-panda-white:hover {
+  background-color: #F8FAFC;
+}
+.btn-panda-white:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* ══════════════════════════════════════════════════════
+   BACKWARD-COMPATIBLE UTILITY ALIASES
+══════════════════════════════════════════════════════ */
+.btn-duo-green { @apply btn-panda-green; }
+.btn-duo-orange { @apply btn-panda-orange; }
+.btn-duo-blue { @apply btn-panda-blue; }
+.btn-duo-white { @apply btn-panda-white; }
+.duo-card { @apply panda-card; }
+.duo-input { @apply panda-input; }
+
+@keyframes popIn {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop-in {
+  animation: popIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ══════════════════════════════════════════════════════
+   HARMONIZED 3D CLEAN CARDS
+══════════════════════════════════════════════════════ */
+.panda-card {
+  background-color: #FFFFFF;
+  border: 2px solid #E2E8F0;
+  border-bottom: 4px solid #CBD5E1;
+  border-radius: 22px;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.panda-card-interactive {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+.panda-card-interactive:hover {
+  border-color: #FB923C;
+}
+.panda-card-interactive:active {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+}
+
+/* Hero card with clean warm tint */
+.panda-hero-box {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF8F1 100%);
+  border: 2px solid #FDD8B5;
+  border-bottom: 4px solid #FCBE87;
+  border-radius: 26px;
+}
+
+/* ══════════════════════════════════════════════════════
+   DUOLINGO 3D SPEECH BUBBLE WITH MATCHING WARM TONE
+══════════════════════════════════════════════════════ */
+.panda-speech-bubble {
+  position: relative;
+  background: #FFFFFF;
+  border: 2px solid #FDD8B5;
+  border-bottom: 4px solid #FCBE87;
+  border-radius: 20px;
+  padding: 12px 18px;
+}
+.panda-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 14px;
+  height: 14px;
+  background: #FFFFFF;
+  border-right: 2px solid #FDD8B5;
+  border-bottom: 3px solid #FCBE87;
+}
+
+/* ══════════════════════════════════════════════════════
+   INPUTS & FORM CONTROLS
+══════════════════════════════════════════════════════ */
+.panda-input {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #F8FAFC;
+  border: 2px solid #E2E8F0;
+  border-bottom: 3px solid #CBD5E1;
+  border-radius: 16px;
+  font-weight: 800;
+  color: #1A1C20;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+.panda-input:focus {
+  background-color: #FFFFFF;
+  border-color: #F97316;
+  border-bottom-color: #C2410C;
+}
+
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
