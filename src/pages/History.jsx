@@ -9,12 +9,14 @@ import {
   Dumbbell,
   Clock,
   Trophy,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { PandaMascot } from '../components/PandaMascot';
 import { formatTime12h, calculateDayTotals } from '../utils/calculations';
 
 export function History({ storage, todayHelper }) {
-  const { dailyLogs, meals, settings, loadSampleData } = storage;
+  const { dailyLogs, meals, settings, hasDemoData, clearDemoRecords } = storage;
   const [dayRange, setDayRange] = useState(7);
 
   const rangeDays = useMemo(() => {
@@ -448,23 +450,28 @@ export function History({ storage, todayHelper }) {
         </div>
       </div>
 
-      {/* Demo Records Button */}
-      <div className="duo-card p-5 text-center space-y-2 bg-white">
-        <p className="text-xs font-black text-duoGray-700">Want to test with full 7-day stats?</p>
-        <p className="text-[11px] text-duoGray-400 font-bold">
-          Load 7 days of realistic records with 1 click.
-        </p>
-        <button
-          onClick={() => {
-            loadSampleData();
-            alert('Loaded 7 days of records! Check your charts above! 🌟');
-          }}
-          className="btn-panda-orange !py-2.5 !px-5 text-xs mx-auto inline-flex items-center gap-2"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-yellow-200 fill-yellow-200" />
-          Load 7-Day Demo Records
-        </button>
-      </div>
+      {/* Demo Records Cleanup (Only visible if demo records currently exist in storage) */}
+      {hasDemoData && (
+        <div className="panda-card p-4 text-center space-y-2.5 bg-amber-50 border-2 border-amber-300 animate-pop-in">
+          <div className="flex items-center justify-center gap-1.5 text-amber-900 font-black text-xs">
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <span>7-Day Demo Records Detected</span>
+          </div>
+          <p className="text-[11px] text-amber-800 font-bold leading-normal">
+            The 7-day demo records are currently saved in your diary. Click below to permanently remove all demo records and restore your real logs.
+          </p>
+          <button
+            onClick={() => {
+              clearDemoRecords();
+              alert('Cleared all demo records! Your real diary has been restored 🐾');
+            }}
+            className="btn-panda-orange !py-2 !px-4 text-xs mx-auto inline-flex items-center gap-1.5 shadow-md"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear Demo Records & Restore My Data
+          </button>
+        </div>
+      )}
     </div>
   );
 }

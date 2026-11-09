@@ -14,7 +14,10 @@ import {
   Zap,
   Crown,
   Activity,
-  RefreshCw
+  RefreshCw,
+  Edit3,
+  AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { PandaMascot } from '../components/PandaMascot';
 import { ProgressRing } from '../components/ProgressRing';
@@ -22,7 +25,8 @@ import { SettingsModal } from '../components/SettingsModal';
 import { HealthSyncModal } from '../components/HealthSyncModal';
 import {
   performAutoStepSync,
-  parseGoogleAuthTokenFromUrl
+  parseGoogleAuthTokenFromUrl,
+  parseAppleHealthUrlParams,
 } from '../services/healthSync';
 import { calculateDayTotals, calculateWeightTrend, formatTime12h, calculateStepCalories } from '../utils/calculations';
 
@@ -41,7 +45,8 @@ export function Dashboard({ storage, todayHelper }) {
     settings,
     updateDailyLog,
     updateSettings,
-    loadSampleData,
+    hasDemoData,
+    clearDemoRecords,
     clearAllData,
   } = storage;
 
@@ -50,30 +55,23 @@ export function Dashboard({ storage, todayHelper }) {
   const todayLog = dailyLogs[selectedDateStr] || {};
   const todayMeals = meals[selectedDateStr] || [];
 
-  // Auto-sync steps on mount if configured
+  // Check URL params for Apple Health Shortcut or Google OAuth token
   useEffect(() => {
-    // 1. Check for Google OAuth token in URL hash
+    // 1. Check for real Apple Health Shortcut param (?syncSteps=XXXX)
+    const appleSteps = parseAppleHealthUrlParams();
+    if (appleSteps !== null) {
+      updateDailyLog(selectedDateStr, { steps: appleSteps });
+      setSyncToast(`Synced ${appleSteps.toLocaleString()} real steps from Apple Health! 🍎`);
+      setTimeout(() => setSyncToast(''), 3500);
+    }
+
+    // 2. Check for Google OAuth token in URL hash
     const tokenObj = parseGoogleAuthTokenFromUrl();
     if (tokenObj) {
       localStorage.setItem('pandafit_gfit_token', tokenObj.accessToken);
       updateSettings({ healthSyncSource: 'google-fit', autoSyncSteps: true });
       setSyncToast('Google Fit authenticated! Steps will sync automatically ⚡');
-      setTimeout(() => setSyncToast(''), 3000);
-    }
-
-    // 2. Perform auto-sync if connected
-    if (settings.autoSyncSteps && settings.healthSyncSource && settings.healthSyncSource !== 'none') {
-      performAutoStepSync({
-        settings,
-        currentSteps: todayLog.steps || 0,
-        selectedDateStr,
-        updateDailyLog
-      }).then((res) => {
-        if (res.synced) {
-          setSyncToast(`Auto-synced ${res.steps?.toLocaleString()} steps from ${res.source}! 🐾`);
-          setTimeout(() => setSyncToast(''), 3000);
-        }
-      });
+      setTimeout(() => setSyncToast(''), 3500);
     }
   }, []);
 
@@ -194,6 +192,31 @@ export function Dashboard({ storage, todayHelper }) {
         </div>
       )}
 
+      {/* Demo Records Cleanup Banner (Only visible if demo records exist in storage) */}
+      {hasDemoData && (
+        <div className="mb-4 p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-center justify-between text-xs font-black text-amber-900 animate-pop-in shadow-sm">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <div>
+              <p>Demo records are active in your diary.</p>
+              <p className="text-[10px] font-bold text-amber-700">Clear them to view only your real entries.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearDemoRecords();
+              setSyncToast('Cleared all demo records! Real diary restored 🐾');
+              setTimeout(() => setSyncToast(''), 3500);
+            }}
+            className="btn-panda-orange !py-1 !px-2.5 text-[10px] whitespace-nowrap flex items-center gap-1 shadow-sm"
+          >
+            <Trash2 className="w-3 h-3" />
+            <span>Clear Demo</span>
+          </button>
+        </div>
+      )}
+
       {/* ── TOP STATS BAR (HARMONIZED WARM ORANGE) ── */}
       <div className="flex items-center justify-between mb-4 bg-white py-2.5 px-3 rounded-2xl border-2 border-ink-200">
         {/* Streak Badge */}
@@ -303,8 +326,18 @@ export function Dashboard({ storage, todayHelper }) {
             </div>
           </div>
           <div className="text-right">
-            <span className="text-base font-black text-ink-900">{(todayLog.steps || 0).toLocaleString()}</span>
-            <span className="text-[10px] text-ink-400 font-bold block">/ {settings.stepsGoal?.toLocaleString()}</span>
+            <button
+              type="button"
+              onClick={() => setIsHealthSyncOpen(true)}
+              className="text-right group cursor-pointer inline-flex flex-col items-end"
+              title="Click to edit or sync steps"
+            >
+              <span className="text-base font-black text-ink-900 group-hover:text-pandaOrange-600 transition-colors flex items-center gap-1">
+                {(todayLog.steps || 0).toLocaleString()}
+                <Edit3 className="w-3 h-3 text-ink-300 group-hover:text-pandaOrange-500" />
+              </span>
+              <span className="text-[10px] text-ink-400 font-bold block">/ {settings.stepsGoal?.toLocaleString()}</span>
+            </button>
           </div>
         </div>
 
@@ -532,7 +565,8 @@ export function Dashboard({ storage, todayHelper }) {
         onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={updateSettings}
-        onLoadSampleData={loadSampleData}
+        hasDemoData={hasDemoData}
+        onClearDemoRecords={clearDemoRecords}
         onClearAllData={clearAllData}
       />
 

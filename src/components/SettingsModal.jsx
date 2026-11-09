@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { X, Save, Sparkles, Trash2, CheckCircle2 } from 'lucide-react';
+import { X, Save, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export function SettingsModal({
   isOpen,
   onClose,
   settings,
   onSave,
-  onLoadSampleData,
+  hasDemoData,
+  onClearDemoRecords,
   onClearAllData,
 }) {
   if (!isOpen) return null;
@@ -183,24 +184,28 @@ export function SettingsModal({
             </div>
           </div>
 
-          {/* Demo Data & Reset */}
+          {/* Data Management */}
           <div className="pt-3 border-t-2 border-duoGray-100 space-y-2">
             <h3 className="text-xs font-black text-duoGray-600 uppercase tracking-wider mb-2">
-              Data Quest Management
+              Data Management
             </h3>
 
-            <button
-              type="button"
-              onClick={() => {
-                onLoadSampleData();
-                alert('Loaded 7 days of realistic records! 🌟');
-                onClose();
-              }}
-              className="btn-duo-blue w-full py-2.5 text-xs flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 text-duoYellow fill-duoYellow" />
-              Load 7-Day Demo Records
-            </button>
+            {hasDemoData && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClearDemoRecords) {
+                    onClearDemoRecords();
+                    alert('Cleared all demo records! Your real logs are restored. 🐾');
+                    onClose();
+                  }
+                }}
+                className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black flex items-center justify-center gap-1.5 transition-colors text-xs shadow-sm"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear Demo Records & Restore My Data
+              </button>
+            )}
 
             <button
               type="button"

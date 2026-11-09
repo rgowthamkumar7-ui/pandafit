@@ -213,7 +213,8 @@ class PhoneMotionPedometer {
 export const phonePedometer = new PhoneMotionPedometer();
 
 /**
- * Performs unified step synchronization based on user settings
+ * Performs authentic step synchronization based on real device sources.
+ * NEVER generates fake or simulated steps based on time of day.
  */
 export async function performAutoStepSync({
   settings,
@@ -226,65 +227,48 @@ export async function performAutoStepSync({
     return { synced: false, reason: 'No health service connected' };
   }
 
-  // 1. Check for Apple Health query params (?syncSteps=XXXX)
+  // 1. Real Apple Health Shortcut query params (?syncSteps=XXXX)
   const shortcutSteps = parseAppleHealthUrlParams();
   if (shortcutSteps !== null) {
     updateDailyLog(selectedDateStr, { steps: shortcutSteps });
     return {
       synced: true,
       steps: shortcutSteps,
-      source: 'Apple Health (Shortcut)'
+      source: 'Apple Health (iOS Shortcut)'
     };
   }
 
-  // 2. Google Fit Sync
+  // 2. Real Google Fit REST API Sync (Requires authenticated OAuth)
   if (source === 'google-fit') {
-    // If a live OAuth token exists in localStorage, use it
     const storedToken = localStorage.getItem('pandafit_gfit_token');
     if (storedToken) {
       try {
         const liveSteps = await fetchGoogleFitSteps(storedToken, new Date(selectedDateStr));
-        if (liveSteps > 0) {
+        if (liveSteps !== undefined && liveSteps !== null) {
           updateDailyLog(selectedDateStr, { steps: liveSteps });
           return {
             synced: true,
             steps: liveSteps,
-            source: 'Google Fit (Live API)'
+            source: 'Google Fit API'
           };
         }
       } catch (e) {
-        console.log('Live Google Fit fetch failed, falling back to simulated sync');
+        console.warn('Real Google Fit API fetch failed:', e);
       }
     }
 
-    // Interactive Google Fit Sync (Simulated live steps based on time of day)
-    const hour = new Date().getHours();
-    const simulatedSteps = Math.max(
-      currentSteps,
-      Math.min(12500, Math.floor(hour * 450 + (Math.sin(hour) + 1) * 800 + 1200))
-    );
-
-    updateDailyLog(selectedDateStr, { steps: simulatedSteps });
     return {
-      synced: true,
-      steps: simulatedSteps,
-      source: 'Google Fit (Health Connect)'
+      synced: false,
+      reason: 'Sign in with Google Fit OAuth or enter steps manually.'
     };
   }
 
-  // 3. Apple Health (HealthKit) Sync
+  // 3. Apple Health (HealthKit)
   if (source === 'apple-health') {
-    const hour = new Date().getHours();
-    const simulatedAppleSteps = Math.max(
-      currentSteps,
-      Math.min(13000, Math.floor(hour * 480 + 1500))
-    );
-
-    updateDailyLog(selectedDateStr, { steps: simulatedAppleSteps });
+    // When opened without ?syncSteps=, do NOT overwrite with fake numbers!
     return {
-      synced: true,
-      steps: simulatedAppleSteps,
-      source: 'Apple Health (HealthKit)'
+      synced: false,
+      reason: 'Run your Apple Health iOS Shortcut or enter your exact steps from iPhone.'
     };
   }
 

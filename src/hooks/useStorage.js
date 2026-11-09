@@ -187,110 +187,75 @@ export function useStorage() {
     setSettings(prev => ({ ...prev, ...newSettings }));
   }, []);
 
-  // Load realistic 7-day demo data
+  // Detect if any demo / sample data exists in storage
+  const hasDemoData = useMemo(() => {
+    // 1. Check for sample meals
+    const hasSampleMeal = Object.values(meals).some(dayList =>
+      Array.isArray(dayList) && dayList.some(m => m.id && String(m.id).startsWith('sample-'))
+    );
+    if (hasSampleMeal) return true;
+
+    // 2. Check for sample daily logs
+    const hasSampleLog = Object.values(dailyLogs).some(log => {
+      if (!log) return false;
+      const isDemoNote = log.notes === 'Feeling energized today! Panda-San is cheering me on 🌸' ||
+                         log.notes === 'Great consistent day! 💪';
+      const isDemoSteps = [8420, 6500, 10240, 7890, 9300, 11200, 8500].includes(log.steps);
+      const isDemoWake = ['06:45', '07:15', '06:30', '07:00', '08:00'].includes(log.wakeUpTime);
+      return isDemoNote || (isDemoSteps && isDemoWake);
+    });
+    return hasSampleLog;
+  }, [meals, dailyLogs]);
+
+  // Completely wipe all demo / sample records and restore user's real diary
+  const clearDemoRecords = useCallback(() => {
+    // Clean meals: remove any meal with id starting with 'sample-'
+    setMeals(prev => {
+      const cleaned = {};
+      Object.keys(prev).forEach(dateStr => {
+        const remaining = (prev[dateStr] || []).filter(m => !String(m.id || '').startsWith('sample-'));
+        if (remaining.length > 0) {
+          cleaned[dateStr] = remaining;
+        }
+      });
+      return cleaned;
+    });
+
+    // Clean dailyLogs: remove any logs created by demo generator
+    setDailyLogs(prev => {
+      const cleaned = {};
+      Object.keys(prev).forEach(dateStr => {
+        const log = prev[dateStr];
+        if (!log) return;
+        const isDemoNote = log.notes === 'Feeling energized today! Panda-San is cheering me on 🌸' ||
+                           log.notes === 'Great consistent day! 💪';
+        const isDemoSteps = [8420, 6500, 10240, 7890, 9300, 11200, 8500].includes(log.steps);
+        const isDemoWake = ['06:45', '07:15', '06:30', '07:00', '08:00'].includes(log.wakeUpTime);
+        if (!isDemoNote && !(isDemoSteps && isDemoWake)) {
+          cleaned[dateStr] = log;
+        }
+      });
+      return cleaned;
+    });
+  }, []);
+
+  // Reset a specific day's log & meals to clean state
+  const resetDayLog = useCallback((dateStr) => {
+    setDailyLogs(prev => {
+      const copy = { ...prev };
+      delete copy[dateStr];
+      return copy;
+    });
+    setMeals(prev => {
+      const copy = { ...prev };
+      delete copy[dateStr];
+      return copy;
+    });
+  }, []);
+
+  // Deprecated dummy load (safely does nothing to protect user's real data)
   const loadSampleData = useCallback(() => {
-    const today = new Date();
-    const sampleLogs = {};
-    const sampleMeals = {};
-
-    const weights = [73.2, 73.0, 72.9, 72.7, 72.8, 72.5, 72.4];
-    const stepsArr = [8420, 6500, 10240, 7890, 9300, 11200, 8500];
-    const workouts = [
-      { done: true, type: 'weights', dur: 45, cal: 320 },
-      { done: false, type: 'walking', dur: 0, cal: 0 },
-      { done: true, type: 'running', dur: 35, cal: 380 },
-      { done: true, type: 'yoga', dur: 30, cal: 130 },
-      { done: false, type: 'walking', dur: 0, cal: 0 },
-      { done: true, type: 'cycling', dur: 40, cal: 310 },
-      { done: true, type: 'weights', dur: 50, cal: 350 },
-    ];
-    const wakeTimes = ['06:45', '07:15', '06:30', '06:30', '07:00', '08:00', '06:30'];
-
-    for (let i = 6; i >= 0; i--) {
-      const d = subDays(today, i);
-      const dStr = format(d, 'yyyy-MM-dd');
-      const idx = 6 - i;
-
-      sampleLogs[dStr] = {
-        wakeUpTime: wakeTimes[idx],
-        workoutDone: workouts[idx].done,
-        workoutType: workouts[idx].type,
-        workoutDuration: workouts[idx].dur,
-        workoutCaloriesBurned: workouts[idx].cal,
-        steps: stepsArr[idx],
-        weight: weights[idx],
-        routineChecks: {
-          'task-water': true,
-          'task-stretch': idx % 2 === 0,
-          'task-walk': stepsArr[idx] >= 7000,
-          'task-vitamins': true,
-          'task-reading': idx > 2,
-        },
-        notes: i === 0 ? 'Feeling energized today! Panda-San is cheering me on 🌸' : 'Great consistent day! 💪',
-      };
-
-      sampleMeals[dStr] = [
-        {
-          id: `sample-m1-${dStr}`,
-          name: idx % 2 === 0 ? 'Idli Sambar (2 pcs) & Coconut Chutney' : 'Masala Dosa with Sambar & Chutney',
-          mealType: 'breakfast',
-          calories: idx % 2 === 0 ? 210 : 360,
-          protein: idx % 2 === 0 ? 7 : 6.5,
-          carbs: idx % 2 === 0 ? 38 : 52,
-          fat: idx % 2 === 0 ? 3.5 : 14,
-          image: idx % 2 === 0 
-            ? 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80'
-            : 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=600&q=80',
-          time: '08:15',
-        },
-        {
-          id: `sample-m2-${dStr}`,
-          name: idx % 2 === 0 
-            ? 'South Indian Meals (Sambar, Rasam, Poriyal, Curd)' 
-            : 'Hyderabadi Chicken Dum Biryani with Raita',
-          mealType: 'lunch',
-          calories: idx % 2 === 0 ? 590 : 680,
-          protein: idx % 2 === 0 ? 15 : 38,
-          carbs: idx % 2 === 0 ? 105 : 76,
-          fat: idx % 2 === 0 ? 11 : 24,
-          image: idx % 2 === 0
-            ? 'https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=600&q=80'
-            : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
-          time: '12:45',
-        },
-        {
-          id: `sample-m3-${dStr}`,
-          name: idx % 2 === 0 ? 'South Indian Filter Coffee & Sundal' : 'Neer Mor (Spiced Buttermilk)',
-          mealType: 'snack',
-          calories: idx % 2 === 0 ? 275 : 55,
-          protein: idx % 2 === 0 ? 12.5 : 3,
-          carbs: idx % 2 === 0 ? 35 : 4.5,
-          fat: idx % 2 === 0 ? 9 : 2.2,
-          image: idx % 2 === 0
-            ? 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80'
-            : 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80',
-          time: '16:30',
-        },
-        {
-          id: `sample-m4-${dStr}`,
-          name: idx % 2 === 0 
-            ? 'Whole Wheat Chapati (2 pcs) with Paneer Butter Masala' 
-            : 'Yellow Dal Tadka with 2 Ghee Phulkas & Jeera Rice',
-          mealType: 'dinner',
-          calories: idx % 2 === 0 ? 490 : 420,
-          protein: idx % 2 === 0 ? 18 : 15,
-          carbs: idx % 2 === 0 ? 52 : 68,
-          fat: idx % 2 === 0 ? 23 : 9.5,
-          image: idx % 2 === 0
-            ? 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80'
-            : 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80',
-          time: '19:45',
-        },
-      ];
-    }
-
-    setDailyLogs(prev => ({ ...prev, ...sampleLogs }));
-    setMeals(prev => ({ ...prev, ...sampleMeals }));
+    console.warn('loadSampleData has been removed to protect user data.');
   }, []);
 
   const clearAllData = useCallback(() => {
@@ -310,6 +275,9 @@ export function useStorage() {
     routineTasks,
     settings,
     customFoods,
+    hasDemoData,
+    clearDemoRecords,
+    resetDayLog,
     saveCustomFood,
     updateDailyLog,
     addMeal,

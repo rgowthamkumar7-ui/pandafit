@@ -9,7 +9,8 @@ import {
   Save,
   CheckCircle2,
   Activity,
-  RefreshCw
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { DaySelector } from '../components/DaySelector';
 import { PandaMascot } from '../components/PandaMascot';
@@ -451,6 +452,33 @@ export function DailyLog({ storage, todayHelper }) {
       >
         <Save className="w-4 h-4" /> Save Today's Log
       </button>
+
+      {/* Reset / Clear Day Button */}
+      {dayLog && (dayLog.workoutDone || dayLog.steps > 0 || dayLog.weight || dayLog.wakeUpTime) && (
+        <div className="text-center pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`Clear all logged values for ${formattedDate}?`)) {
+                if (storage.resetDayLog) {
+                  storage.resetDayLog(selectedDateStr);
+                }
+                setSteps(0);
+                setWeight('');
+                setWorkoutCalories(0);
+                setWorkoutDuration(30);
+                setNotes('');
+                setSaveSuccessToast(true);
+                setTimeout(() => setSaveSuccessToast(false), 2500);
+              }
+            }}
+            className="text-[11px] font-bold text-ink-400 hover:text-red-600 transition-colors inline-flex items-center gap-1"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear entries for {formattedDate}</span>
+          </button>
+        </div>
+      )}
 
       {/* Health Sync Modal */}
       <HealthSyncModal
